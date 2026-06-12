@@ -1,5 +1,9 @@
 venv/
-.env
+data/raw/*.csv
+.ipynb_checkpoints/
 __pycache__/
 *.pyc
+.env
+.DS_Store
+.env
 .DS_Store
