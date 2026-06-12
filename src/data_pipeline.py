@@ -21,27 +21,38 @@ COLUMNS = [
 MIN_ROWS_FOR_EXACT_MATCH = 5
 
 
-def load_land_registry_data(csv_path: str) -> pd.DataFrame:
+def load_land_registry_data(csv_paths) -> pd.DataFrame:
     """
-    Load the raw Land Registry CSV and assign proper column names.
+    Load one or more Land Registry CSVs and combine them into a single
+    DataFrame with proper column names and parsed dates.
 
     Args:
-        csv_path: path to the Land Registry CSV file.
+        csv_paths: a single file path (str) or a list of file paths.
 
     Returns:
-        A pandas DataFrame with named columns, or an empty DataFrame
-        if the file can't be read.
+        A combined pandas DataFrame, or an empty DataFrame if nothing
+        could be loaded.
     """
-    try:
-        df = pd.read_csv(csv_path, names=COLUMNS, header=None)
-        df["date_of_transfer"] = pd.to_datetime(df["date_of_transfer"], errors="coerce")
-        return df
-    except FileNotFoundError:
-        print(f"[ERROR] File not found: {csv_path}")
+    if isinstance(csv_paths, str):
+        csv_paths = [csv_paths]
+
+    frames = []
+    for path in csv_paths:
+        try:
+            df = pd.read_csv(path, names=COLUMNS, header=None)
+            frames.append(df)
+        except FileNotFoundError:
+            print(f"[WARNING] File not found, skipping: {path}")
+        except Exception as e:
+            print(f"[WARNING] Failed to load {path}, skipping: {e}")
+
+    if not frames:
+        print("[ERROR] No data files could be loaded.")
         return pd.DataFrame(columns=COLUMNS)
-    except Exception as e:
-        print(f"[ERROR] Failed to load data: {e}")
-        return pd.DataFrame(columns=COLUMNS)
+
+    combined = pd.concat(frames, ignore_index=True)
+    combined["date_of_transfer"] = pd.to_datetime(combined["date_of_transfer"], errors="coerce")
+    return combined
 
 
 def is_valid_postcode_format(postcode: str) -> bool:
@@ -66,8 +77,8 @@ def get_property_history(df: pd.DataFrame, postcode: str) -> dict:
     the postcode district if there's not enough exact-match data.
 
     Returns a dict with:
-        - status: "exact", "district_fallback", or "not_found"
-        - data: filtered DataFrame (empty if not_found)
+        - status: "exact", "district_fallback", "not_found", or "invalid_input"
+        - data: filtered DataFrame (empty if not_found or invalid_input)
         - message: human-readable explanation
     """
     if not is_valid_postcode_format(postcode):

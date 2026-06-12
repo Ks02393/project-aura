@@ -19,7 +19,10 @@ from data_pipeline import (
     calculate_rental_yield,
 )
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "raw", "pp-2024.csv")
+DATA_PATH = [
+    os.path.join(os.path.dirname(__file__), "..", "data", "raw", f"pp-{year}.csv")
+    for year in [2021, 2022, 2023, 2024, 2025]
+]
 
 
 def test_load_data():
